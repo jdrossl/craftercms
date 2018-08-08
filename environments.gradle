@@ -117,7 +117,7 @@ task("authoringPostEnvironment") {
                 workingDir "${authEnv}/bin"
                 commandLine commandLinePrefix + ["chmod", "+x", "crafter.sh", "startup.sh", "debug.sh", "shutdown.sh",
                                                  "crafter-setenv.sh", "upgrade/start-upgrade.sh",
-                                                 "upgrade/upgrade-target.sh"]
+                                                 "upgrade/upgrade-target.sh", "install-license.sh"]
             }
         }
 
@@ -211,7 +211,8 @@ task("deliveryPostEnvironment") {
                 workingDir "${deliveryEnv}/bin"
                 commandLine commandLinePrefix + ["chmod", "+x", "crafter.sh", "startup.sh", "debug.sh", "shutdown.sh",
                                                  "crafter-setenv.sh", "init-site.sh", "remove-site.sh",
-                                                 "upgrade/start-upgrade.sh", "upgrade/upgrade-target.sh"]
+                                                 "upgrade/start-upgrade.sh", "upgrade/upgrade-target.sh", 
+                                                 "install-license.sh"]
             }
         }
 
