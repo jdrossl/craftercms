@@ -62,7 +62,7 @@ function manPages(){
     man "$CRAFTER_HOME/crafter.sh.1"
 }
 function pidOf(){
-  pid=$(lsof -i :$1 | grep LISTEN | awk '{print $2}' | grep -v PID)
+  pid=$(lsof -i :$1 | grep LISTEN | awk '{print $2}' | grep -v PID | uniq)
   echo $pid
 }
 
@@ -230,6 +230,78 @@ function stopSolr() {
   fi
 }
 
+function startElasticSearch() {
+  cd $CRAFTER_HOME
+  echo "------------------------------------------------------------"
+  echo "Starting ElasticSearch"
+  echo "------------------------------------------------------------"
+  if [ ! -d $ES_INDEXES_DIR ]; then
+    mkdir -p $ES_INDEXES_DIR;
+  fi
+  if [ ! -d $ES_LOGS_DIR ]; then
+    mkdir -p $ES_LOGS_DIR;
+  fi
+
+  if [ ! -s "$ES_PID" ]; then
+    ## Before run check if the port is available.
+    possiblePID=$(pidOf $ES_PORT)
+    if  [ -z "$possiblePID" ];  then
+      $CRAFTER_HOME/elasticsearch/bin/elasticsearch -d
+      while [ -z $(pidOf $ES_PORT) ]
+      do
+        sleep 5
+      done
+      echo $(pidOf $ES_PORT) > $ES_PID
+    else
+      echo $possiblePID > $ES_PID
+      echo "Process PID $possiblePID is listening port $ES_PORT"
+      echo "Hijacking PID and saving into $ES_PID"
+      exit 0
+    fi
+  else
+    # IS it really up ?
+    if ! checkPortForRunning $ES_PORT $(cat "$ES_PID");then
+      exit 6
+    fi
+    if ! pgrep -u `whoami` -F "$ES_PID" >/dev/null
+    then
+      echo "ElasticSearch Pid file is not ok, forcing startup"
+      rm "$ES_PID"
+      startElasticSearch
+    fi
+    echo "ElasticSearch already started"
+  fi
+}
+
+function stopElasticSearch() {
+  cd $CRAFTER_HOME
+  echo "------------------------------------------------------------"
+  echo "Stopping ElasticSearch"
+  echo "------------------------------------------------------------"
+  if [ -s "$ES_PID" ]; then
+    echo "A"
+    if pgrep -F "$ES_PID"
+    then
+      echo "A"
+      killPID $ES_PID
+    fi
+    if [ $? -eq 0 ]; then
+      echo "B"
+      rm $ES_PID
+    fi
+  else
+    echo "B"
+    pid=$(pidOf $ES_PORT)
+    if [ ! -z $pid ]; then
+      echo "A"
+      echo "$pid" > $ES_PID
+      # No pid file but we found the process
+      killPID $ES_PID
+    fi
+    echo "ElasticSearch already shutdown or pid $ES_PID file not found";
+  fi
+}
+
 function startTomcat() {
   cd $CRAFTER_HOME
   if [[ ! -d "$CRAFTER_HOME/dbms" ]] || [[ -z $(pidOf "$MARIADB_PORT") ]] ;then
@@ -390,13 +462,13 @@ function startMongoDB(){
   fi
 }
 
-
 function isMongoNeeded() {
-   if [ -z "$1" ]; then
-    test -s $PROFILE_WAR_PATH || test -d $PROFILE_DEPLOY_WAR_PATH
-   else
-      test "$1" = "forceMongo"
-   fi
+  for o in "$@"; do
+    if [ $o = "forceMongo" ]; then
+      return 0
+    fi
+  done
+  test -s $PROFILE_WAR_PATH || test -d $PROFILE_DEPLOY_WAR_PATH
 }
 
 function stopMongoDB(){
@@ -432,6 +504,14 @@ function stopMongoDB(){
   fi
 }
 
+function isSolrNeeded() {
+  for o in "$@"; do
+    if [ $o = "useSolr" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 function solrStatus(){
   echo "------------------------------------------------------------"
@@ -538,18 +618,24 @@ function mongoDbStatus(){
 
 function start() {
   startDeployer
-  startSolr
- if isMongoNeeded $1; then
+  startElasticSearch
+  if isSolrNeeded; then
+    startSolr
+  fi
+  if isMongoNeeded; then
     startMongoDB
- fi
+  fi
   startTomcat
   printTailInfo
 }
 
 function debug() {
   debugDeployer
-  debugSolr
-  if isMongoNeeded $1; then
+  debugElasticSearch
+  if isSolrNeeded; then
+    debugSolr
+  fi
+  if isMongoNeeded; then
     startMongoDB
   fi
   debugTomcat
@@ -558,11 +644,14 @@ function debug() {
 
 function stop() {
   stopTomcat
-  if $(isMongoNeeded $1) || [ ! -z $(pidOf $MONGODB_PORT) ]; then
+  if $(isMongoNeeded) || [ ! -z $(pidOf $MONGODB_PORT) ]; then
      stopMongoDB
   fi
-  stopSolr
   stopDeployer
+  stopElasticSearch
+  if $(isSolrNeeded) || [ ! -z $(pidOf $SOLR_PORT) ]; then
+    stopSolr
+  fi
 }
 
 function status(){
@@ -762,6 +851,18 @@ case $1 in
   logo
   stopSolr
   ;;
+  start_elasticsearch)
+  logo
+  startElasticSearch
+  ;;
+  debug_elasticsearch)
+  logo
+  debugElasticSearch
+  ;;
+  stopElasticSearch)
+  logo
+  stop_elasticsearch
+  ;;
   debug_tomcat)
   logo
   debugTomcat
@@ -796,6 +897,9 @@ case $1 in
   ;;
   status_deployer)
     deployerStatus
+  ;;
+  status_elasticsearch)
+    elasticSearchStatus
   ;;
   status_solr)
     solrStatus
