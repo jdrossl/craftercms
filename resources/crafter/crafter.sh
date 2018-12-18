@@ -69,7 +69,7 @@ function pidOf(){
 function killPID(){
   pkill -15 -F "$1"
   sleep 5 # % mississippis
-  if pgrep -F "$1"
+  if [ -s "$1" ] && pgrep -F "$1" > /dev/null
   then
     pkill -9 -F "$1" # force kill
   fi
@@ -212,7 +212,7 @@ function stopSolr() {
   echo "------------------------------------------------------------"
   if [ -s "$SOLR_PID" ]; then
     $CRAFTER_HOME/solr/bin/solr stop
-    if pgrep -F "$SOLR_PID"
+    if pgrep -F "$SOLR_PID" > /dev/null
     then
       killPID $SOLR_PID
     fi
@@ -246,12 +246,7 @@ function startElasticSearch() {
     ## Before run check if the port is available.
     possiblePID=$(pidOf $ES_PORT)
     if  [ -z "$possiblePID" ];  then
-      $CRAFTER_HOME/elasticsearch/bin/elasticsearch -d
-      while [ -z $(pidOf $ES_PORT) ]
-      do
-        sleep 5
-      done
-      echo $(pidOf $ES_PORT) > $ES_PID
+      $CRAFTER_HOME/elasticsearch/bin/elasticsearch -d -p $ES_PID
     else
       echo $possiblePID > $ES_PID
       echo "Process PID $possiblePID is listening port $ES_PORT"
@@ -279,21 +274,13 @@ function stopElasticSearch() {
   echo "Stopping ElasticSearch"
   echo "------------------------------------------------------------"
   if [ -s "$ES_PID" ]; then
-    echo "A"
-    if pgrep -F "$ES_PID"
+    if pgrep -F "$ES_PID" > /dev/null
     then
-      echo "A"
       killPID $ES_PID
     fi
-    if [ $? -eq 0 ]; then
-      echo "B"
-      rm $ES_PID
-    fi
   else
-    echo "B"
     pid=$(pidOf $ES_PORT)
     if [ ! -z $pid ]; then
-      echo "A"
       echo "$pid" > $ES_PID
       # No pid file but we found the process
       killPID $ES_PID
@@ -392,7 +379,7 @@ function stopTomcat() {
   if [ -s "$CATALINA_PID" ]; then
     $CRAFTER_HOME/apache-tomcat/bin/shutdown.sh -force
     if [ -e "$CATALINA_PID" ]; then
-      if pgrep -F "$CATALINA_PID"
+      if pgrep -F "$CATALINA_PID" > /dev/null
       then
         killPID $CATALINA_PID
       fi
@@ -483,7 +470,7 @@ function stopMongoDB(){
       *)
       pkill -3 -F "$MONGODB_PID"
       sleep 5 # % mississippis
-      if pgrep -F "$MONGODB_PID"
+      if pgrep -F "$MONGODB_PID" > /dev/null
       then
         pkill -9 -F "$MONGODB_PID" # force kill
       fi
@@ -504,9 +491,18 @@ function stopMongoDB(){
   fi
 }
 
+function skipElasticSearch() {
+  for o in "$@"; do
+    if [ $o = "skipElasticSearch" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 function isSolrNeeded() {
   for o in "$@"; do
-    if [ $o = "useSolr" ]; then
+    if [ $o = "withSolr" ]; then
       return 0
     fi
   done
@@ -600,7 +596,7 @@ function mongoDbStatus(){
   echo "------------------------------------------------------------"
   echo "MongoDB status                                              "
   echo "------------------------------------------------------------"
- if $(isMongoNeeded $1) || [ ! -z $(pidOf $MONGODB_PORT) ]; then
+ if $(isMongoNeeded "$@") || [ ! -z $(pidOf $MONGODB_PORT) ]; then
       if [ -e "$MONGODB_PID" ]; then
         echo -e "MongoDB PID"
         echo $(cat $MONGODB_PID)
@@ -618,11 +614,13 @@ function mongoDbStatus(){
 
 function start() {
   startDeployer
-  startElasticSearch
-  if isSolrNeeded; then
+  if ! skipElasticSearch "$@"; then
+    startElasticSearch
+  fi
+  if isSolrNeeded "$@"; then
     startSolr
   fi
-  if isMongoNeeded; then
+  if isMongoNeeded "$@"; then
     startMongoDB
   fi
   startTomcat
@@ -632,10 +630,10 @@ function start() {
 function debug() {
   debugDeployer
   debugElasticSearch
-  if isSolrNeeded; then
+  if isSolrNeeded "$@"; then
     debugSolr
   fi
-  if isMongoNeeded; then
+  if isMongoNeeded "$@"; then
     startMongoDB
   fi
   debugTomcat
@@ -644,12 +642,12 @@ function debug() {
 
 function stop() {
   stopTomcat
-  if $(isMongoNeeded) || [ ! -z $(pidOf $MONGODB_PORT) ]; then
+  if $(isMongoNeeded "$@") || [ ! -z $(pidOf $MONGODB_PORT) ]; then
      stopMongoDB
   fi
   stopDeployer
   stopElasticSearch
-  if $(isSolrNeeded) || [ ! -z $(pidOf $SOLR_PORT) ]; then
+  if $(isSolrNeeded "$@") || [ ! -z $(pidOf $SOLR_PORT) ]; then
     stopSolr
   fi
 }

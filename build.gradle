@@ -137,6 +137,8 @@ ext {
                 ",src/test/resources/testng_StudioAPI2.xml"
 
     startMongodb = project.hasProperty("startMongodb") ? project.property("startMongodb") : false // Does not really.
+    withElasticSearch = project.hasProperty("withElasticSearch") ? project.property("withElasticSearch") : true
+    withSolr = project.hasProperty("withSolr") ? project.property("withSolr") : false
     silentBuild = project.hasProperty("crafter.build.silent") ? project.property("crafter.build.silent") : false
     typeOfBundle = project.hasProperty("crafter.bundle.archive") ? project.property("crafter.bundle.archive") : "both"
 
@@ -322,6 +324,12 @@ envs.each { env ->
             def extraStartupParams = []
             if (startMongodb) {
                 extraStartupParams.add("forceMongo")
+            }
+            if (!withElasticSearch) {
+              extraStartupParams.add("skipElasticSearch")
+            }
+            if (withSolr) {
+              extraStartupParams.add("withSolr")
             }
             def path = env.equalsIgnoreCase("authoring") ? "${authEnv}" : "${deliveryEnv}"
             if (!file(path).exists()) {
