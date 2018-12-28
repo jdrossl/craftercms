@@ -180,10 +180,21 @@ REM ZIP git repos
 echo "Adding git repos"
 cd "%CRAFTER_DATA_DIR%\repos"
 java -jar "%CRAFTER_HOME%\craftercms-utils.jar" zip . "%TEMP_FOLDER%\repos.zip"
+
 REM ZIP solr indexes
-echo "Adding solr indexes"
-cd "%SOLR_INDEXES_DIR%"
-java -jar "%CRAFTER_HOME%\craftercms-utils.jar" zip . "%TEMP_FOLDER%\indexes.zip"
+IF EXIST "%SOLR_INDEXES_DIR%" (
+  echo "Adding solr indexes"
+  cd "%SOLR_INDEXES_DIR%"
+  java -jar "%CRAFTER_HOME%\craftercms-utils.jar" zip . "%TEMP_FOLDER%\indexes.zip"
+)
+
+REM ZIP elasticsearch indexes
+IF EXIST "%ES_INDEXES_DIR%" (
+  echo "Adding elasticsearch indexes"
+  cd "%ES_INDEXES_DIR%"
+  java -jar "%CRAFTER_HOME%\craftercms-utils.jar" zip . "%TEMP_FOLDER%\indexes-es.zip"
+)
+
 REM ZIP deployer data
 echo "Adding deployer data"
 cd "%DEPLOYER_DATA_DIR%"
@@ -247,10 +258,16 @@ java -jar "%CRAFTER_HOME%\craftercms-utils.jar" unzip "%TEMP_FOLDER%\repos.zip" 
 :skipRepos
 
 REM UNZIP solr indexes
-IF NOT EXIST "%TEMP_FOLDER%\indexes.zip" ( goto skipIndexes )
+IF NOT EXIST "%TEMP_FOLDER%\indexes.zip" ( goto skipSolr )
 echo "Restoring solr indexes"
 java -jar "%CRAFTER_HOME%\craftercms-utils.jar" unzip "%TEMP_FOLDER%\indexes.zip" "%SOLR_INDEXES_DIR%"
-:skipIndexes
+:skipSolr
+
+REM UNZIP elasticsearch indexes
+IF NOT EXIST "%TEMP_FOLDER%\indexes-es.zip" ( goto skipElasticSearch )
+echo "Restoring elasticsearch indexes"
+java -jar "%CRAFTER_HOME%\craftercms-utils.jar" unzip "%TEMP_FOLDER%\indexes-es.zip" "%ES_INDEXES_DIR%"
+:skipElasticSearch
 
 REM UNZIP deployer data
 IF NOT EXIST "%TEMP_FOLDER%\deployer.zip" ( goto skipDeployer )
@@ -283,7 +300,14 @@ goto cleanOnExitKeepTermAlive
 
 
 :skill
-call "%CRAFTER_HOME%\solr\bin\solr" stop -p %SOLR_PORT%
+IF "%WITH_SOLR%"=="true" (
+  call "%CRAFTER_HOME%\solr\bin\solr" stop -p %SOLR_PORT%
+)
+
+IF NOT "%SKIP_ELASTICSEARCH%"=="true" (
+  taskkill /IM elasticsearch
+)
+
 @rem Windows does not support Or in the If soo...
 
 netstat -o -n -a | findstr  "0.0.0.0:%MONGODB_PORT%"
