@@ -88,7 +88,7 @@ IF "%WITH_SOLR%"=="true" (
 
 IF NOT "%SKIP_ELASTICSEARCH%"=="true" (
   IF NOT EXIST "%ES_INDEXES_DIR%" mkdir "%ES_INDEXES_DIR%"
-  call "%CRAFTER_HOME%\elasticsearch\bin\elasticsearch" -d
+  start "ElasticSearch" cmd /c call "%CRAFTER_HOME%\elasticsearch\bin\elasticsearch" -d
 )
 
 IF NOT EXIST "%CATALINA_LOGS_DIR%" mkdir "%CATALINA_LOGS_DIR%"
@@ -305,7 +305,7 @@ IF "%WITH_SOLR%"=="true" (
 )
 
 IF NOT "%SKIP_ELASTICSEARCH%"=="true" (
-  taskkill /IM elasticsearch
+  taskkill /fi "WINDOWTITLE eq ElasticSearch"
 )
 
 @rem Windows does not support Or in the If soo...
