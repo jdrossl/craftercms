@@ -45,7 +45,7 @@ ext {
     processTailReadDelay = 100
     processTailFinishDelay = 1000
 
-    /** Unzip Properties **/
+    /** Download Properties **/
     groovyVersion = project.hasProperty("groovy.version") ? project.property("groovy.version") : "2.5.0"
     tomcatVersion = project.hasProperty("tomcat.version") ? project.property("tomcat.version") : "8.5.24"
     solrVersion = project.hasProperty("solr.version") ? project.property("solr.version") : "7.5.0"
@@ -143,8 +143,8 @@ ext {
     typeOfBundle = project.hasProperty("crafter.bundle.archive") ? project.property("crafter.bundle.archive") : "both"
 
     /** Cloneable Artifacts **/
-    VALID_MODULES = 
-      ["commons", "core", "search", "profile", "engine", "deployer", "studio", "social", "studio-ui", "test-suite", 
+    VALID_MODULES =
+      ["commons", "core", "search", "profile", "engine", "deployer", "studio", "social", "studio-ui", "test-suite",
       "plugin-maker", "studio-ui-ng"]
 
     /** Deployable Artifacts **/

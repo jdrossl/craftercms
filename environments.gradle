@@ -273,6 +273,7 @@ envs.each { env ->
                 }
                 file("${path}/bin/solr-${solrVersion}").renameTo(file("${path}/bin/solr"))
             }
+            
             copy {
                 from "./src/search/crafter-search-provider/solr/configsets"
                 into "${path}/bin/solr/server/solr/configsets"
