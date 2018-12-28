@@ -66,7 +66,7 @@ IF %ERRORLEVEL% equ 0 (
 )
 
 IF EXIST "%PROFILE_WAR_PATH%" set start_mongo=true
-IF /i "%FORCE_MONGO%"=="forceMongo" set start_mongo=true
+IF /i "%FORCE_MONGO%"=="true" set start_mongo=true
 
 IF /i "%start_mongo%"=="true" (
   set mongoDir=%CRAFTER_HOME%mongodb
@@ -77,8 +77,17 @@ IF /i "%start_mongo%"=="true" (
   start "" "%mongoDir%\bin\mongod" --dbpath="%MONGODB_DATA_DIR%" --directoryperdb --journal --logpath="%MONGODB_LOGS_DIR%\mongod.log" --port %MONGODB_PORT%
 )
 start "" "%DEPLOYER_HOME%\%DEPLOYER_STARTUP%"
-IF NOT EXIST "%CRAFTER_DATA_DIR%\indexes" mkdir "%CRAFTER_DATA_DIR%\indexes"
-call "%CRAFTER_HOME%solr\bin\solr" start -p %SOLR_PORT% -s "%SOLR_HOME%" -Dcrafter.solr.index="%CRAFTER_DATA_DIR%\indexes"
+
+IF "%WITH_SOLR%"=="true" (
+  IF NOT EXIST "%SOLR_INDEXES_DIR%" mkdir "%SOLR_INDEXES_DIR%"
+  call "%CRAFTER_HOME%solr\bin\solr" start -p %SOLR_PORT% -s "%SOLR_HOME%" -Dcrafter.solr.index="%SOLR_INDEXES_DIR%"
+)
+
+IF NOT "%SKIP_ELASTICSEARCH%"=="true" (
+  IF NOT EXIST "%ES_INDEXES_DIR%" mkdir "%ES_INDEXES_DIR%"
+  call "%CRAFTER_HOME%\elasticsearch\bin\elasticsearch" -d
+)
+
 pushd "%CRAFTER_HOME%"
 call "%CATALINA_HOME%\bin\startup.bat"
 popd

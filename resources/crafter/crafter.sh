@@ -25,15 +25,18 @@ export DEPLOYER_HOME=${DEPLOYER_HOME:=$CRAFTER_HOME/crafter-deployer}
 
 function help() {
   echo $(basename $BASH_SOURCE)
-  echo "    start [forceMongo], Starts Tomcat, Deployer and Solr, if forceMongo Mongodb will be run"
+  echo "    start [forceMongo] [withSolr] [skipElasticSearch], Starts Tomcat, Deployer and Solr, if forceMongo Mongodb will be run"
   echo "    stop  [forceMongo], Stops Tomcat, Deployer and Solr if forceMongo Mongodb will be run"
-  echo "    debug [forceMongo], Starts Tomcat, Deployer and Solr in debug mode if forceMongo Mongodb will be run"
+  echo "    debug [forceMongo] [withSolr] [skipElasticSearch], Starts Tomcat, Deployer and Solr in debug mode if forceMongo Mongodb will be run"
   echo "    start_deployer, Starts Deployer"
   echo "    stop_deployer, Stops Deployer"
   echo "    debug_deployer, Starts Deployer in debug mode"
   echo "    start_solr, Starts Solr"
   echo "    stop_solr, Stops Solr"
   echo "    debug_solr, Starts Solr in debug mode"
+  echo "    start_elasticsearch, Starts ElasticSearch"
+  echo "    stop_elasticsearch, Stops ElasticSearch"
+  echo "    debug_elasticsearch, Starts ElasticSearch in debug mode"
   echo "    start_tomcat, Starts Tomcat"
   echo "    stop_tomcat, Stops Tomcat"
   echo "    debug_tomcat, Starts Tomcat in debug mode"
@@ -43,6 +46,7 @@ function help() {
   echo "    status_tomcat,Status of Tomcat"
   echo "    status_deployer, Status of Deployer"
   echo "    status_solr, Status of Solr"
+  echo "    status_elasticsearch, Status of ElasticSearch"
   echo "    status_mariadb, Status of MariaDB"
   echo "    status_mongodb, Status of MonoDb"
   echo "    backup <name>, Perform a backup of all data"
@@ -268,6 +272,45 @@ function startElasticSearch() {
   fi
 }
 
+function debugElasticSearch() {
+  cd $CRAFTER_HOME
+  echo "------------------------------------------------------------"
+  echo "Starting ElasticSearch"
+  echo "------------------------------------------------------------"
+  if [ ! -d $ES_INDEXES_DIR ]; then
+    mkdir -p $ES_INDEXES_DIR;
+  fi
+  if [ ! -d $ES_LOGS_DIR ]; then
+    mkdir -p $ES_LOGS_DIR;
+  fi
+
+  if [ ! -s "$ES_PID" ]; then
+    ## Before run check if the port is available.
+    possiblePID=$(pidOf $ES_PORT)
+    if  [ -z "$possiblePID" ];  then
+      export ES_JAVA_OPTS="$ES_JAVA_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=1045"
+      $CRAFTER_HOME/elasticsearch/bin/elasticsearch -d -p $ES_PID
+    else
+      echo $possiblePID > $ES_PID
+      echo "Process PID $possiblePID is listening port $ES_PORT"
+      echo "Hijacking PID and saving into $ES_PID"
+      exit 0
+    fi
+  else
+    # IS it really up ?
+    if ! checkPortForRunning $ES_PORT $(cat "$ES_PID");then
+      exit 6
+    fi
+    if ! pgrep -u `whoami` -F "$ES_PID" >/dev/null
+    then
+      echo "ElasticSearch Pid file is not ok, forcing startup"
+      rm "$ES_PID"
+      startElasticSearch
+    fi
+    echo "ElasticSearch already started"
+  fi
+}
+
 function stopElasticSearch() {
   cd $CRAFTER_HOME
   echo "------------------------------------------------------------"
@@ -286,6 +329,26 @@ function stopElasticSearch() {
       killPID $ES_PID
     fi
     echo "ElasticSearch already shutdown or pid $ES_PID file not found";
+  fi
+}
+
+function elasticSearchStatus(){
+  echo "------------------------------------------------------------"
+  echo "ElasticSearch status                                        "
+  echo "------------------------------------------------------------"
+
+  esStatusOut=$(curl --silent  -f "http://localhost:$ES_PORT/_cat/nodes?h=uptime,version")
+  if [ $? -eq 0 ]; then
+    echo -e "PID\t"
+    echo `cat "$ES_PID"`
+    echo -e  "uptime:\t"
+    echo "$esStatusOut" | awk '{print $1}'
+    echo -e  "ElasticSearch Version:\t"
+    echo "$esStatusOut" | awk '{print $2}'
+  else
+    echo -e "\033[38;5;196m"
+    echo "Solr is not running or is unreachable on port $ES_PORT"
+    echo -e "\033[0m"
   fi
 }
 
@@ -709,9 +772,17 @@ function doBackup() {
   cd "$CRAFTER_DATA_DIR/repos"
   java -jar $CRAFTER_HOME/craftercms-utils.jar zip . "$TEMP_FOLDER/repos.zip"
   # ZIP solr indexes
-  echo "Adding solr indexes"
-  cd "$SOLR_INDEXES_DIR"
-  java -jar $CRAFTER_HOME/craftercms-utils.jar zip . "$TEMP_FOLDER/indexes.zip"
+  if [ -d "$SOLR_INDEXES_DIR" ]; then
+    echo "Adding solr indexes"
+    cd "$SOLR_INDEXES_DIR"
+    java -jar $CRAFTER_HOME/craftercms-utils.jar zip . "$TEMP_FOLDER/indexes.zip"
+  fi
+  # ZIP elasticsearch indexes
+  if [ -d "$ES_INDEXES_DIR" ]; then
+    echo "Adding elasticsearch indexes"
+    cd "$ES_INDEXES_DIR"
+    java -jar $CRAFTER_HOME/craftercms-utils.jar zip . "$TEMP_FOLDER/indexes-es.zip"
+  fi
   # ZIP deployer data
   echo "Adding deployer data"
   cd "$DEPLOYER_DATA_DIR"
@@ -770,9 +841,18 @@ attempt the restore. Are you sure you want to proceed? (yes/no) "
   java -jar $CRAFTER_HOME/craftercms-utils.jar unzip "$TEMP_FOLDER/repos.zip" "$CRAFTER_DATA_DIR/repos"
 
   # UNZIP solr indexes
-  echo "Restoring solr indexes"
-  rm -rf "$SOLR_INDEXES_DIR/*"
-  java -jar $CRAFTER_HOME/craftercms-utils.jar unzip "$TEMP_FOLDER/indexes.zip" "$SOLR_INDEXES_DIR"
+  if [ -f "$TEMP_FOLDER/indexes.zip" ]; then
+    echo "Restoring solr indexes"
+    rm -rf "$SOLR_INDEXES_DIR/*"
+    java -jar $CRAFTER_HOME/craftercms-utils.jar unzip "$TEMP_FOLDER/indexes.zip" "$SOLR_INDEXES_DIR"
+  fi
+  
+  # UNZIP elasticsearch indexes
+  if [ -f "$TEMP_FOLDER/indexes-es.zip" ]; then
+    echo "Restoring elasticsearch indexes"
+    rm -rf "$ES_INDEXES_DIR/*"
+    java -jar $CRAFTER_HOME/craftercms-utils.jar unzip "$TEMP_FOLDER/indexes-es.zip" "$ES_INDEXES_DIR"
+  fi
 
   # UNZIP deployer data
   echo "Restoring deployer data"

@@ -17,6 +17,14 @@ SET "SOLR_INDEXES_DIR=%CRAFTER_DATA_DIR%\indexes"
 SET SOLR_LOGS_DIR="%CRAFTER_LOGS_DIR%\solr"
 SET SOLR_OPTS=-server -Xss1024K -Xmx1G
 SET "SOLR_HOME=%CRAFTER_HOME%solr\server\solr"
+
+REM ElasticSearch variables
+SET ES_PORT=@ES_PORT@
+SET ES_INDEXES_DIR=%CRAFTER_DATA_DIR%\indexes-es
+SET ES_LOGS_DIR="%CRAFTER_LOGS_DIR%\elasticsearch"
+SET ES_PID=%CRAFTER_HOME%\elasticsearch\bin\elasticsearch.pid
+SET ES_JAVA_OPTS="-server -Xss1024K -Xmx1G"
+
 SET DEPLOYER_PORT=@DEPLOYER_PORT@
 SET DEPLOYER_DEBUG_PORT=@DEPLOYER_D_PORT@
 SET "DEPLOYER_DATA_DIR=%CRAFTER_DATA_DIR%\deployer"
@@ -41,6 +49,17 @@ SET DEPLOYER_SHUTDOWN=shutdown.bat
 SET DEPLOYER_DEBUG=debug.bat
 SET "PROFILE_DEPLOY_WAR_PATH=%CATALINA_HOME%/webapps/crafter-profile"
 SET "PROFILE_WAR_PATH=%CATALINA_HOME%/webapps/crafter-profile.war"
-SET FORCE_MONGO=%1
+
+SET FORCE_MONGO=false
+SET WITH_SOLR=false
+SET SKIP_ELASTICSEARCH=false
+
+FOR %%param in (%*) DO (
+  IF "%%param"=="forceMongo" SET FORCE_MONGO=true
+  ELSE IF "%%param"=="withSolr" SET WITH_SOLR=true
+  ELSE IF "%%param"=="skipElasticSearch" SET SKIP_ELASTICSEARCH=true
+)
+
+
 @rem in Seconds
 SET TIME_BEFORE_KILL=20

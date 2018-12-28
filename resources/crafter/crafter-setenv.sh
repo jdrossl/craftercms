@@ -29,7 +29,8 @@ export SOLR_HOME=$CRAFTER_HOME/solr/server/solr
 export ES_PORT=@ES_PORT@
 export ES_INDEXES_DIR=$CRAFTER_DATA_DIR/indexes-es
 export ES_LOGS_DIR="$CRAFTER_LOGS_DIR/elasticsearch"
-export ES_PID=$ES_INDEXES_DIR/elasticsearch.pid
+export ES_PID=$CRAFTER_HOME/elasticsearch/bin/elasticsearch.pid
+export ES_JAVA_OPTS="-server -Xss1024K -Xmx1G"
 
 # Deployer variables
 export DEPLOYER_PORT=@DEPLOYER_PORT@
