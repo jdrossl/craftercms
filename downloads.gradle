@@ -25,7 +25,6 @@ buildscript {
 }
 
 import java.security.MessageDigest;
-import org.apache.commons.lang3.SystemUtils;
 
 task downloadGroovy() {
     description = "Downloads, checks Groovy integrity and unzips it"
@@ -109,22 +108,22 @@ task downloadElasticsearch() {
     description = "Downloads, checks Elasticsearch integrity and unzips it"
     doFirst {
         download {
-            src "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${elasticsearchVersion}.zip"
+            src "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${elasticsearchVersion}-${elasticsearchPlatform}-x86_64.tar.gz"
             overwrite false
-            dest file("${downloadDir}/elasticsearch-${elasticsearchVersion}.zip")
+            dest file("${downloadDir}/elasticsearch-${elasticsearchVersion}-${elasticsearchPlatform}.tar.gz")
         }
         download {
-            src "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${elasticsearchVersion}.zip.sha512"
-            dest file("${downloadDir}/elasticsearch-${elasticsearchVersion}.zip.sha512")
+            src "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${elasticsearchVersion}-${elasticsearchPlatform}-x86_64.tar.gz.sha512"
+            dest file("${downloadDir}/elasticsearch-${elasticsearchVersion}-${elasticsearchPlatform}.tar.gz.sha512")
             overwrite false
         }
     }
     doLast {
-        assert sha512(new File(downloadDir, "elasticsearch-${elasticsearchVersion}.zip")) == new File(downloadDir, "elasticsearch-${elasticsearchVersion}.zip.sha512").getText('UTF-8').split(" ")[0]
+        assert sha512(new File(downloadDir, "elasticsearch-${elasticsearchVersion}-${elasticsearchPlatform}.tar.gz")) == new File(downloadDir, "elasticsearch-${elasticsearchVersion}-${elasticsearchPlatform}.tar.gz.sha512").getText('UTF-8').split(" ")[0]
 
         if (!file("${downloadDir}/elasticsearch-${elasticsearchVersion}").exists()) {
             copy {
-                from zipTree("${downloadDir}/elasticsearch-${elasticsearchVersion}.zip")
+                from tarTree("${downloadDir}/elasticsearch-${elasticsearchVersion}-${elasticsearchPlatform}.tar.gz")
                 into "${downloadDir}"
             }
         }
