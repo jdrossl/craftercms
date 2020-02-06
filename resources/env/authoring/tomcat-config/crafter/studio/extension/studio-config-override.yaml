@@ -28,7 +28,19 @@ studio.configuration.management.authorizationToken: ${env:STUDIO_MANAGEMENT_TOKE
 # Preview engine management authorization token.
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.previewAuthorizationToken: ${env:ENGINE_MANAGEMENT_TOKEN}
-
+# Protected URLs with preview engine management authorization token.
+# Coma separated list of preview engine urls
+studio.configuration.management.previewProtectedUrls: >-
+  /api/1/monitoring/log.json,
+  /api/1/monitoring/memory.json,
+  /api/1/monitoring/status.json,
+  /api/1/monitoring/version.json,
+  /api/1/site/context/id,
+  /api/1/site/context/destroy,
+  /api/1/site/context/rebuild,
+  /api/1/site/context/graphql/rebuild,
+  /api/1/site/cache/clear,
+  /api/1/site/cache/statistics
 ############################################################
 ##                    Preview Deployer                    ##
 ############################################################
@@ -293,6 +305,8 @@ studio.search.password: ${env:ES_PASSWORD}
 #   # The delivery Elasticsearch endpoint (optional is authoring is using the same one, specified in the ES_URL env variable)
 #   elastic_search_url:
 #   aws:
+#     # AWS region
+#     region: us-east-1
 #     # AWS access key (optional if specified through default AWS chain)
 #     default_access_key:
 #     # AWS secret key (optional if specified through default AWS chain)
