@@ -1,11 +1,10 @@
 #!/bin/bash
 
-# Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+# Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
 #
 # This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# it under the terms of the GNU General Public License version 3 as published by
+# the Free Software Foundation.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -91,7 +90,7 @@ export CATALINA_TMPDIR=${CATALINA_TMPDIR:="$CRAFTER_TEMP_DIR/tomcat"}
 export GIT_CONFIG_NOSYSTEM=${GIT_CONFIG_NOSYSTEM:="true"}
 
 # -------------------- Management tokens ----------------
-# Please update this per installation and provide this token to the status monitors.
+# Please update this per installation and provide these tokens to the status monitors.
 export ENGINE_MANAGEMENT_TOKEN=${ENGINE_MANAGEMENT_TOKEN:="defaultManagementToken"}
 export DEPLOYER_MANAGEMENT_TOKEN=${DEPLOYER_MANAGEMENT_TOKEN:="defaultManagementToken"}
 export SEARCH_MANAGEMENT_TOKEN=${SEARCH_MANAGEMENT_TOKEN:="defaultManagementToken"}
